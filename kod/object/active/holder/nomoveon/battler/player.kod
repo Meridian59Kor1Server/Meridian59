@@ -117,7 +117,7 @@ constants:
 
    % Damage is overall capped to this number.  Gives a slight edge to people
    %  with higher hps.
-   MAX_DAMAGE_PER_HIT = 30
+   MAX_DAMAGE_PER_HIT = 99999
 
    % What's the maximum stat we can have after modification?
    MAXIMUM_STAT = 70
@@ -6985,9 +6985,9 @@ messages:
       iPrev_max = piBase_max_health;
 
       piBase_max_health = Bound(piBase_max_health+amount,20,
-                              (100 + Send(self,@GetStamina)));
-      % Bound ourselves at the top end to 150.
-      piBase_max_health = bound(piBase_max_health,$,150);
+                              99999);
+      % Bound ourselves at the top end to 99999.
+      piBase_max_health = bound(piBase_max_health,$,99999);
       amount = piBase_max_health - iPrev_max;
 
       % Give them the "further info" gmail if they've advanced to 25.
@@ -8897,7 +8897,56 @@ messages:
                AND ((piFlags & PFLAG_TOOK_DAMAGE)
                   OR (piFlags & PFLAG_DODGED))
             {
+               %gain = 1;
+%%%%%
+            if killing_blow
+               AND ((piFlags & PFLAG_TOOK_DAMAGE)
+                  OR (piFlags & PFLAG_DODGED))
+            {
+               % Player took damage and landed killing blow
                gain = 1;
+               roll = TRUE;
+            }
+            else
+            {
+               % Player either did not take damage, but did killing blow (mage),
+               %  or did take damage, did not land killing blow, or
+               %  it's a group member kill.
+               
+               gain = 1;
+
+               % We still roll for a tougher if we killed the monster but
+               % didn't take damage or dodge, if we helped kill the monster,
+               % or if it was a group member kill and the setting for group
+               % member toughers is set to TRUE.
+               if NOT group_member_kill
+                  OR Send(Send(SYS,@GetSettings),@GetGroupTougherSetting)
+               {
+                  roll = TRUE;
+               }
+               
+               % Inform the player that a group kill successfully garnered XP.
+               if group_member_kill
+                  AND group_member <> $
+                  AND gain = 1
+               {
+                  Send(self,@MsgSendUser,#message_rsc=group_experience_rsc,
+                        #parm1=Send(group_member,@GetName),
+                        #parm2=Send(what,@GetName));
+               }
+               
+               % Give an informative message about non-group
+               % kills that are still shared
+               if NOT killing_blow
+                  AND NOT group_member_kill
+                  AND group_member <> $
+               {
+                  Send(self,@MsgSendUser,#message_rsc=group_experience_rsc,
+                        #parm1=Send(group_member,@GetName),
+                        #parm2=Send(what,@GetName));
+               }
+            }
+%%%%%
             }
             else
             {
@@ -8905,6 +8954,55 @@ messages:
                if random(1,100) < 30 AND killing_blow
                {
                   Send(self,@MsgSendUser,#message_rsc=player_spits);
+%%%%%
+            if killing_blow
+               AND ((piFlags & PFLAG_TOOK_DAMAGE)
+                  OR (piFlags & PFLAG_DODGED))
+            {
+               % Player took damage and landed killing blow
+               gain = 1;
+               roll = TRUE;
+            }
+            else
+            {
+               % Player either did not take damage, but did killing blow (mage),
+               %  or did take damage, did not land killing blow, or
+               %  it's a group member kill.
+               
+               gain = 1;
+
+               % We still roll for a tougher if we killed the monster but
+               % didn't take damage or dodge, if we helped kill the monster,
+               % or if it was a group member kill and the setting for group
+               % member toughers is set to TRUE.
+               if NOT group_member_kill
+                  OR Send(Send(SYS,@GetSettings),@GetGroupTougherSetting)
+               {
+                  roll = TRUE;
+               }
+               
+               % Inform the player that a group kill successfully garnered XP.
+               if group_member_kill
+                  AND group_member <> $
+                  AND gain = 1
+               {
+                  Send(self,@MsgSendUser,#message_rsc=group_experience_rsc,
+                        #parm1=Send(group_member,@GetName),
+                        #parm2=Send(what,@GetName));
+               }
+               
+               % Give an informative message about non-group
+               % kills that are still shared
+               if NOT killing_blow
+                  AND NOT group_member_kill
+                  AND group_member <> $
+               {
+                  Send(self,@MsgSendUser,#message_rsc=group_experience_rsc,
+                        #parm1=Send(group_member,@GetName),
+                        #parm2=Send(what,@GetName));
+               }
+            }
+%%%%%
                }
             }
          }
@@ -9081,7 +9179,7 @@ messages:
       Post(self,@DrawHPChance);
 
       if iRandom < iNumber
-         AND piBase_Max_health < (101 + Send(self,@GetStamina))
+         AND piBase_Max_health < (99999)
       {
          Send(self,@GainBaseMaxHealth,#amount=1);
          if Send(self,@CheckLog)
