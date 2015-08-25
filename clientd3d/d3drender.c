@@ -6,6 +6,9 @@
 //
 // Meridian is a registered trademark.
 #include "client.h"
+#include <Windows.h>	///////////////
+#include <locale.h>	//For unicode//
+#include <stdio.h>	///////////////
 
 #define	TEX_CACHE_MAX_OBJECT	8000000
 #define	TEX_CACHE_MAX_WORLD		8000000
@@ -3881,7 +3884,7 @@ void D3DRenderNamesDraw3D(d3d_render_cache_system *pCacheSystem, d3d_render_pool
 						room_type *room, Draw3DParams *params, font_3d *pFont)
 {
 	D3DMATRIX			mat, rot, xForm, trans;
-	int					angleHeading, anglePitch, strLen, sector_flags, offset;
+	int					angleHeading, anglePitch, /*strLen, <- unnecessary*/ sector_flags, offset;
 	room_contents_node	*pRNode;
 	list_type			list;
 	long				dx, dy, angle, top, bottom;
@@ -3891,13 +3894,19 @@ void D3DRenderNamesDraw3D(d3d_render_cache_system *pCacheSystem, d3d_render_pool
 	custom_bgra			bgra;
 	float				lastDistance, width, height, x, z, depth, distance;
 	char				*pName, *ptr;
-	TCHAR				c;
+	//TCHAR				c;	//unnecessary
 	COLORREF			fg_color;
 	Color				color;
 	BYTE				*palette;
 
 	d3d_render_packet_new	*pPacket;
 	d3d_render_chunk_new	*pChunk;
+	
+	_wsetlocale(LC_ALL, L"korean");		/* For wild character and korean language string */
+	int len, b;
+	WCHAR* w_ptr = NULL;
+	WCHAR* w_ptr2 = NULL;
+	WCHAR* tw_ptr = NULL;
 
 	angleHeading = params->viewer_angle + 3072;
 	if (angleHeading >= 4096)
@@ -3940,7 +3949,7 @@ void D3DRenderNamesDraw3D(d3d_render_cache_system *pCacheSystem, d3d_render_pool
 		angle = (pRNode->angle - intATan2(-dy,-dx)) & NUMDEGREES_MASK;
 
 		pName = LookupNameRsc(pRNode->obj.name_res);
-		strLen = strlen(pName);
+		//strLen = strlen(pName);	//unnecessary
 
 		angle = pRNode->angle - (params->viewer_angle + 3072);
 
@@ -4040,28 +4049,37 @@ void D3DRenderNamesDraw3D(d3d_render_cache_system *pCacheSystem, d3d_render_pool
 //			z += ((float)pRNode->boundingHeightAdjust * 4.0f);// / 1.66f;
 
 			ptr = pName;
+			
+			/* For unicode */
+			len = MultiByteToWideChar(CP_ACP, NULL, ptr, -1, NULL, NULL);
+			w_ptr = (WCHAR*)malloc(len * 2);
+			w_ptr2 = (WCHAR*)malloc(len * 2);
+			MultiByteToWideChar(CP_ACP, 0, ptr, -1, w_ptr, len * 2);
+			tw_ptr = w_ptr2;
+			w_ptr2 = w_ptr;
 
-			while (c = *ptr++)
+			while (b = *w_ptr2++)
 			{
-				x += (pFont->texST[c - 32][1].s - pFont->texST[c - 32][0].s) *
+				x += (pFont->texST[b][1].s - pFont->texST[b][0].s) *
 					pFont->texWidth / pFont->texScale * (distance / FINENESS);
 			}
 
-			ptr = pName;
+			//ptr = pName;	//unnecessary
+			w_ptr2 = w_ptr;
 
-			while (c = *ptr++)
+			while (b = *w_ptr2++)
 			{
 				int	i;
 
 				// flip t values since bmps are upside down
-				st[0].s = pFont->texST[c - 32][0].s;
-				st[0].t = pFont->texST[c - 32][1].t;
-				st[1].s = pFont->texST[c - 32][0].s;
-				st[1].t = pFont->texST[c - 32][0].t;
-				st[2].s = pFont->texST[c - 32][1].s;
-				st[2].t = pFont->texST[c - 32][0].t;
-				st[3].s = pFont->texST[c - 32][1].s;
-				st[3].t = pFont->texST[c - 32][1].t;
+				st[0].s = pFont->texST[b][0].s;
+				st[0].t = pFont->texST[b][1].t;
+				st[1].s = pFont->texST[b][0].s;
+				st[1].t = pFont->texST[b][0].t;
+				st[2].s = pFont->texST[b][1].s;
+				st[2].t = pFont->texST[b][0].t;
+				st[3].s = pFont->texST[b][1].s;
+				st[3].t = pFont->texST[b][1].t;
 
 				width = (st[2].s - st[0].s) * pFont->texWidth * 2.0f / pFont->texScale *
 					(distance / FINENESS);
@@ -4165,6 +4183,11 @@ void D3DRenderNamesDraw3D(d3d_render_cache_system *pCacheSystem, d3d_render_pool
 
 				x -= width;
 			}
+			free(w_ptr);
+			w_ptr = NULL;
+			w_ptr2 = tw_ptr;
+			free(w_ptr2);
+			w_ptr2 = NULL;
 		}
 	}
 }
@@ -5656,17 +5679,21 @@ void D3DRenderLMapPostWallAdd(WallData *pWall, d3d_render_pool_new *pPool, unsig
 
 void D3DRenderFontInit(font_3d *pFont, HFONT hFont)
 {
+	_wsetlocale(LC_ALL, L"korean");		// For korean language string
+	
 	D3DCAPS9		d3dCaps;
-	HDC				hDC;
+	HDC			hDC;
 	HBITMAP			hbmBitmap;
 	DWORD			*pBitmapBits;
 	BITMAPINFO		bmi;
 	long			x = 0;
 	long			y = 0;
-	TCHAR			str[2] = _T("x");
-	TCHAR			c;
+	//TCHAR			str[2] = _T("x");	/*unnecessary
+	//TCHAR			c;			  unnecessary*/
+	WCHAR			str2[2] = L"x";		//For unicode
+	int			b;			//For unicode
 	SIZE			size;
-	D3DLOCKED_RECT	d3dlr;
+	D3DLOCKED_RECT		d3dlr;
 	BYTE			*pDstRow;
 	WORD			*pDst16;
 	BYTE			bAlpha;
@@ -5677,12 +5704,16 @@ void D3DRenderFontInit(font_3d *pFont, HFONT hFont)
 	pFont->flags = 0;
 	pFont->texScale = 1.0f;
    
-	if (pFont->fontHeight > 40)
+   	//	unnecessary
+	/*if (pFont->fontHeight > 40)
 		pFont->texWidth = pFont->texHeight = 1024;
 	else if (pFont->fontHeight > 20)
 		pFont->texWidth = pFont->texHeight = 512;
 	else
-		pFont->texWidth = pFont->texHeight = 256;
+		pFont->texWidth = pFont->texHeight = 256;*/
+		
+	pFont->texWidth = 5060;		// Space to get a symbol from font
+	pFont->texHeight = 5060;	//	   (Width*Height)
    
 	IDirect3DDevice9_GetDeviceCaps(gpD3DDevice, &d3dCaps);
   
@@ -5731,24 +5762,24 @@ void D3DRenderFontInit(font_3d *pFont, HFONT hFont)
 	SetBkColor(hDC, 0);
 	SetTextAlign(hDC, TA_TOP);
    
-	for(c = 32; c < 127; c++ )
+	for(b = 0; b < UNICODE_MAX; b++ )	// This will cause increase execution time.
 	{
 		BOOL	temp;
 		int left_offset, right_offset;
       
-		str[0] = c;
-		GetTextExtentPoint32(hDC, str, 1, &size);
+		str2[0] = b;
+		GetTextExtentPoint32W(hDC, str2, wcslen(str2), &size);
       
-		if (!GetCharABCWidths(hDC, c, c, &pFont->abc[c-32])) 
+		if (!GetCharABCWidthsW(hDC, b, b, &pFont->abc[b])) 
 		{
-			pFont->abc[c-32].abcA = 0;
-			pFont->abc[c-32].abcB = size.cx;
-			pFont->abc[c-32].abcC = 0;
+			pFont->abc[b].abcA = 0;
+			pFont->abc[b].abcB = size.cx;
+			pFont->abc[b].abcC = 0;
 		}
       
-		left_offset = abs(pFont->abc[c-32].abcA);
-		right_offset = abs(pFont->abc[c-32].abcC);
-		size.cx = abs(pFont->abc[c-32].abcA) + pFont->abc[c-32].abcB + abs(pFont->abc[c-32].abcC);
+		left_offset = abs(pFont->abc[b].abcA);
+		right_offset = abs(pFont->abc[b].abcC);
+		size.cx = abs(pFont->abc[b].abcA) + pFont->abc[b].abcB + abs(pFont->abc[b].abcC);
       
 		if (x + size.cx + 1 > pFont->texWidth)
 		{
@@ -5756,12 +5787,12 @@ void D3DRenderFontInit(font_3d *pFont, HFONT hFont)
 			y += size.cy + 1;
 		}
       
-		temp = ExtTextOut(hDC, x + left_offset, y+0, ETO_OPAQUE, NULL, str, 1, NULL);
+		temp = ExtTextOutW(hDC, x + left_offset, y + 0, ETO_OPAQUE, NULL, str2, wcslen(str2), NULL);
       
-		pFont->texST[c-32][0].s = ((FLOAT)(x+0)) / pFont->texWidth;
-		pFont->texST[c-32][0].t = ((FLOAT)(y+0)) / pFont->texHeight;
-		pFont->texST[c-32][1].s = ((FLOAT)(x+0 + size.cx)) / pFont->texWidth;
-		pFont->texST[c-32][1].t = ((FLOAT)(y+0 + size.cy)) / pFont->texHeight;
+		pFont->texST[b][0].s = ((FLOAT)(x+0)) / pFont->texWidth;
+		pFont->texST[b][0].t = ((FLOAT)(y+0)) / pFont->texHeight;
+		pFont->texST[b][1].s = ((FLOAT)(x+0 + size.cx)) / pFont->texWidth;
+		pFont->texST[b][1].t = ((FLOAT)(y+0 + size.cy)) / pFont->texHeight;
       
 		x += size.cx+1;
 	}
