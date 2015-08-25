@@ -4249,13 +4249,13 @@ messages:
          return FALSE;
       }
 
-      if NOT StringConsistsOf(sName, 
-          "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890_ '!@$^&*()+=:[]{};/?|<>")
-      {
-         Debug("Got char name with illegal characters for user ", oUser);
-
-         return FALSE;
-      }
+      %if NOT StringConsistsOf(sName, 
+      %    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890_ '!@$^&*()+=:[]{};/?|<>")
+      %{
+      %   Debug("Got char name with illegal characters for user ", oUser);
+      %
+      %   return FALSE;
+      %}
 
       oLookup = Send(SYS,@FindUserByString,#string=sName);
       if oLookup <> $
