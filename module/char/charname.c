@@ -17,8 +17,8 @@ static HWND hTabPage;   // Handle of this tabbed dialog
 extern HWND hMakeCharDialog;
 
 /* Legal characters for character names */
-static char legal_chars[] = 
-"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890_ '!@$^&*()+=:[]{};/?|<>";
+//static char legal_chars[] = 
+//"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890_ '!@$^&*()+=:[]{};/?|<>";
 
 /********************************************************************/
 BOOL CALLBACK CharNameDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
@@ -100,8 +100,8 @@ char *VerifyCharName(char *name)
       return NULL;
 
    // Check that name is made up of legal characters
-   if ((int) strspn(name, legal_chars) != len)
-      return NULL;
+   //if ((int) strspn(name, legal_chars) != len)
+   //   return NULL;
 
    return name;
 }
