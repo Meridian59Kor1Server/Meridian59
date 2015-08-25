@@ -37,6 +37,8 @@ inline DWORD F2DW( FLOAT f ) { return *((DWORD*)&f); }
 #define D3DRENDER_REDRAW_UPDATE	0x00000001
 #define D3DRENDER_REDRAW_ALL	0x00000002
 
+#define UNICODE_MAX		0xFFFF	//For unicode
+
 #define D3DRENDER_SET_ALPHATEST_STATE(_pDevice, _enable, _refValue, _compareFunc)	\
 	IDirect3DDevice9_SetRenderState(gpD3DDevice, D3DRS_ALPHATESTENABLE, _enable);	\
 	IDirect3DDevice9_SetRenderState(gpD3DDevice, D3DRS_ALPHAREF, _refValue);	\
@@ -115,9 +117,11 @@ typedef struct font_3d
 	long				texWidth;
 	long				texHeight;
 	float				texScale;
-	custom_st			texST[128 - 32][2];
+	//custom_st			texST[128 - 32][2];
+	custom_st			texST[UNICODE_MAX][2];	//For unicode
   // Deal with underhanging and overhanging characters
-  ABC         abc[128 - 32];
+  //ABC         abc[128 - 32];
+  ABC         abc[UNICODE_MAX];					//For unicode
 } font_3d;
 
 extern LPDIRECT3D9				gpD3D;
