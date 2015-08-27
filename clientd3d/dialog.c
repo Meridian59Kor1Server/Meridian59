@@ -11,7 +11,7 @@
 
 #include "client.h"
 
-#define PAGE_BREAK_CHAR 'ถ'	  /* For multi-page descriptions */
+#define PAGE_BREAK_CHAR 'ขา'	  /* For multi-page descriptions */
 #define MAX_PAGE_DESCRIPTION_TEXT MAXMESSAGE
 
 static HWND hDescDialog = NULL;   /* Non-null if Description dialog is up */

@@ -112,16 +112,20 @@ typedef struct font_3d
 	TCHAR				strFontName[80];
 	long				fontHeight;
 	long				flags;
-
 	LPDIRECT3DTEXTURE9	pTexture;
 	long				texWidth;
 	long				texHeight;
 	float				texScale;
 	//custom_st			texST[128 - 32][2];
 	custom_st			texST[UNICODE_MAX][2];	//For unicode
-  // Deal with underhanging and overhanging characters
-  //ABC         abc[128 - 32];
-  ABC         abc[UNICODE_MAX];					//For unicode
+	int					left_offset[UNICODE_MAX];
+	int				x[UNICODE_MAX];
+	int				y[UNICODE_MAX];
+	
+	//DWORD			*pBitmapBits;
+	// Deal with underhanging and overhanging characters
+	//ABC         abc[128 - 32];
+	ABC         abc[UNICODE_MAX];					//For unicode
 } font_3d;
 
 extern LPDIRECT3D9				gpD3D;

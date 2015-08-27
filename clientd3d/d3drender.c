@@ -9,6 +9,7 @@
 #include <Windows.h>	///////////////
 #include <locale.h>	//For unicode//
 #include <stdio.h>	///////////////
+#include <string.h>
 
 #define	TEX_CACHE_MAX_OBJECT	8000000
 #define	TEX_CACHE_MAX_WORLD		8000000
@@ -335,6 +336,10 @@ void           D3DExtractFloorFromTree(BSPnode *pNode, PDIB pDib, custom_xyz *pX
    custom_bgra *pBGRA);
 void           D3DExtractCeilingFromTree(BSPnode *pNode, PDIB pDib, custom_xyz *pXYZ, custom_st *pST,
    custom_bgra *pBGRA);
+
+// Read&Write D3D Font data
+int WriteD3DFontData(font_3d *pFont);
+int ReadD3DFontData(font_3d *pFont);
 
 // externed stuff
 extern int			FindHotspotPdib(PDIB pdib, char hotspot, POINT *point);
@@ -5677,9 +5682,185 @@ void D3DRenderLMapPostWallAdd(WallData *pWall, d3d_render_pool_new *pPool, unsig
    //				CACHE_ST_ADD(pRenderCache, 1, stBase[i].s, stBase[i].t);
 }
 
+int WriteD3DFontData(font_3d *pFont) {
+	int state, result;
+	char path[512];
+	char fontName[128];
+	char extent[8];
+
+	strcpy_s(path, sizeof("d3dfonts\\") / sizeof(char), "d3dfonts\\");
+	strcpy_s(fontName, sizeof(pFont->strFontName) / sizeof(char), pFont->strFontName);
+	strcat_s(path, sizeof(path), fontName);
+	strcpy_s(extent, sizeof(".dfd") / sizeof(char), ".dfd");
+	strcat_s(path, sizeof(path), extent);
+
+	FILE* f;
+	fopen_s(&f, path, "wb");
+	if (f == NULL) {
+		dprintf("file open error!\n");
+		return 1;
+	}
+
+	fflush(stdout);
+
+	//fseek(f, 0, SEEK_SET);
+	result = fwrite(pFont->texST, 1024, 1024, f);
+	if (result != 1024) {
+		dprintf("write error1!\n");
+		dprintf("result: %d\n", result);
+
+		state = fclose(f);
+		if (state != 0) {
+			dprintf("file close error!\n");
+			return 1;
+		}
+
+		return 1;
+	}
+	
+	result = fwrite(pFont->left_offset, 1024, 256, f);
+	if (result != 256) {
+		dprintf("write error2!\n");
+		dprintf("result: %d\n", result);
+
+		state = fclose(f);
+		if (state != 0) {
+			dprintf("file close error!\n");
+			return 1;
+		}
+
+		return 1;
+	}
+	
+	result = fwrite(pFont->x, 1024, 256, f);
+	if (result != 256) {
+		dprintf("write error3!\n");
+		dprintf("result: %d\n", result);
+
+		state = fclose(f);
+		if (state != 0) {
+			dprintf("file close error!\n");
+			return 1;
+		}
+
+		return 1;
+	}
+	
+	result = fwrite(pFont->y, 1024, 256, f);
+	if (result != 256) {
+		dprintf("write error4!\n");
+		dprintf("result: %d\n", result);
+
+		state = fclose(f);
+		if (state != 0) {
+			dprintf("file close error!\n");
+			return 1;
+		}
+
+		return 1;
+	}
+
+	state = fclose(f);
+	if (state != 0) {
+		dprintf("file close error!\n");
+		return 1;
+	}
+
+	return 0;
+}
+
+int ReadD3DFontData(font_3d *pFont) {
+	int state;
+	int result;
+	char path[512];
+	char fontName[128];
+	char extent[8];
+
+	strcpy_s(path, sizeof("d3dfonts\\") / sizeof(char), "d3dfonts\\");
+	strcpy_s(fontName, sizeof(pFont->strFontName) / sizeof(char), pFont->strFontName);
+	strcat_s(path, sizeof(path), fontName);
+	strcpy_s(extent, sizeof(".dfd") / sizeof(char), ".dfd");
+	strcat_s(path, sizeof(path), extent);
+
+	FILE* f;
+	fopen_s(&f, path, "rb");
+	if (f == NULL) {
+		dprintf("file open error!\n");
+		return 1;
+	}
+
+	fflush(stdin);
+
+	//fseek(f, 0, SEEK_SET);
+	result = fread(pFont->texST, 1024, 1024, f);
+	if (result != 1024) {
+		dprintf("read error1!\n");
+		dprintf("result: %d\n", result);
+
+		state = fclose(f);
+		if (state != 0) {
+			dprintf("file close error!\n");
+			return 1;
+		}
+
+		return 1;
+	}
+	
+	result = fread(pFont->left_offset, 1024, 256, f);
+	if (result != 256) {
+		dprintf("read error2!\n");
+		dprintf("result: %d\n", result);
+
+		state = fclose(f);
+		if (state != 0) {
+			dprintf("file close error!\n");
+			return 1;
+		}
+
+		return 1;
+	}
+	
+	result = fread(pFont->x, 1024, 256, f);
+	if (result != 256) {
+		dprintf("read error3!\n");
+		dprintf("result: %d\n", result);
+
+		state = fclose(f);
+		if (state != 0) {
+			dprintf("file close error!\n");
+			return 1;
+		}
+
+		return 1;
+	}
+	
+	result = fread(pFont->y, 1024, 256, f);
+	if (result != 256) {
+		dprintf("read error4!\n");
+		dprintf("result: %d\n", result);
+
+		state = fclose(f);
+		if (state != 0) {
+			dprintf("file close error!\n");
+			return 1;
+		}
+
+		return 1;
+	}
+
+	state = fclose(f);
+	if (state != 0) {
+		dprintf("file close error!\n");
+		return 1;
+	}
+
+	return 0;
+}
+
 void D3DRenderFontInit(font_3d *pFont, HFONT hFont)
 {
 	_wsetlocale(LC_ALL, L"korean");		// For korean language string
+	int state;
 	
 	D3DCAPS9		d3dCaps;
 	HDC			hDC;
@@ -5698,6 +5879,9 @@ void D3DRenderFontInit(font_3d *pFont, HFONT hFont)
 	WORD			*pDst16;
 	BYTE			bAlpha;
 	HRESULT			hr;
+
+	pFont->x[0] = 0;
+	pFont->y[0] = 0;
 
 	pFont->fontHeight = GetFontHeight(hFont);
 //	pFont->flags = flags;
@@ -5761,40 +5945,59 @@ void D3DRenderFontInit(font_3d *pFont, HFONT hFont)
 	SetTextColor(hDC, RGB(255,255,255));
 	SetBkColor(hDC, 0);
 	SetTextAlign(hDC, TA_TOP);
-   
-	for(b = 0; b < UNICODE_MAX; b++ )	// This will cause increase execution time.
-	{
+
+	LOGFONT lf;
+	if (GetLogFont(FONT_LABELS, &lf))
+		strcpy_s(pFont->strFontName, sizeof(lf.lfFaceName) / sizeof(char), lf.lfFaceName);
+
+	state = ReadD3DFontData(pFont);
+	dprintf("read state: %d\n", state);
+	if (state == 1) {
+		for (b = 0; b < UNICODE_MAX; b++)	// This will cause increase execution time.
+		{
+			BOOL	temp;
+			int right_offset;
+
+			str2[0] = b;
+			GetTextExtentPoint32W(hDC, str2, wcslen(str2), &size);
+
+			if (!GetCharABCWidthsW(hDC, b, b, &pFont->abc[b]))
+			{
+				pFont->abc[b].abcA = 0;
+				pFont->abc[b].abcB = size.cx;
+				pFont->abc[b].abcC = 0;
+			}
+
+			pFont->left_offset[b] = abs(pFont->abc[b].abcA);
+			right_offset = abs(pFont->abc[b].abcC);
+			size.cx = pFont->left_offset[b] + pFont->abc[b].abcB + abs(pFont->abc[b].abcC);
+
+			if (pFont->x[b] + size.cx + 1 > pFont->texWidth)
+			{
+				pFont->x[b] = 0;
+				pFont->y[b] += size.cy + 1;
+			}
+
+			temp = ExtTextOutW(hDC, pFont->x[b] + pFont->left_offset[b], pFont->y[b], ETO_OPAQUE, NULL, str2, wcslen(str2), NULL);
+
+			pFont->texST[b][0].s = ((FLOAT)(pFont->x[b] + 0)) / pFont->texWidth;
+			pFont->texST[b][0].t = ((FLOAT)(pFont->y[b] + 0)) / pFont->texHeight;
+			pFont->texST[b][1].s = ((FLOAT)(pFont->x[b] + 0 + size.cx)) / pFont->texWidth;
+			pFont->texST[b][1].t = ((FLOAT)(pFont->y[b] + 0 + size.cy)) / pFont->texHeight;
+
+			if (b < UNICODE_MAX - 1) {
+				pFont->x[b + 1] = pFont->x[b] + size.cx + 1;
+				pFont->y[b + 1] = pFont->y[b];
+			}
+		}
+		state = WriteD3DFontData(pFont);
+		dprintf("write state: %d\n", state);
+	} else {
 		BOOL	temp;
-		int left_offset, right_offset;
-      
-		str2[0] = b;
-		GetTextExtentPoint32W(hDC, str2, wcslen(str2), &size);
-      
-		if (!GetCharABCWidthsW(hDC, b, b, &pFont->abc[b])) 
-		{
-			pFont->abc[b].abcA = 0;
-			pFont->abc[b].abcB = size.cx;
-			pFont->abc[b].abcC = 0;
+		for (b = 0; b < UNICODE_MAX; b++) {
+			str2[0] = b;
+			temp = ExtTextOutW(hDC, pFont->x[b] + pFont->left_offset[b], pFont->y[b], ETO_OPAQUE, NULL, str2, wcslen(str2), NULL);
 		}
-      
-		left_offset = abs(pFont->abc[b].abcA);
-		right_offset = abs(pFont->abc[b].abcC);
-		size.cx = abs(pFont->abc[b].abcA) + pFont->abc[b].abcB + abs(pFont->abc[b].abcC);
-      
-		if (x + size.cx + 1 > pFont->texWidth)
-		{
-			x  = 0;
-			y += size.cy + 1;
-		}
-      
-		temp = ExtTextOutW(hDC, x + left_offset, y + 0, ETO_OPAQUE, NULL, str2, wcslen(str2), NULL);
-      
-		pFont->texST[b][0].s = ((FLOAT)(x+0)) / pFont->texWidth;
-		pFont->texST[b][0].t = ((FLOAT)(y+0)) / pFont->texHeight;
-		pFont->texST[b][1].s = ((FLOAT)(x+0 + size.cx)) / pFont->texWidth;
-		pFont->texST[b][1].t = ((FLOAT)(y+0 + size.cy)) / pFont->texHeight;
-      
-		x += size.cx+1;
 	}
    
 	hr = IDirect3DTexture9_LockRect(pFont->pTexture, 0, &d3dlr, 0, 0);
