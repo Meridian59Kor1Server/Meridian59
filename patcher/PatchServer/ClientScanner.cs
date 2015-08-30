@@ -18,7 +18,8 @@ namespace PatchListGenerator
             ScanFolder = new List<string>
             {
                 "C:\\Meridian59-master\\run\\localclient\\",
-                "C:\\Meridian59-master\\run\\localclient\\resource"
+                "C:\\Meridian59-master\\run\\localclient\\resource",
+                "C:\\Meridian59-master\\run\\localclient\\d3dfonts"
             };
             AddExensions();
         }
