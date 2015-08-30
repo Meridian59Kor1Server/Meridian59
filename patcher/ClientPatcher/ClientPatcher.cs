@@ -158,6 +158,7 @@ namespace ClientPatcher
                 Directory.CreateDirectory(CurrentProfile.ClientFolder + "\\help\\");
                 Directory.CreateDirectory(CurrentProfile.ClientFolder + "\\mail\\");
                 Directory.CreateDirectory(CurrentProfile.ClientFolder + "\\ads\\");
+                Directory.CreateDirectory(CurrentProfile.ClientFolder + "\\d3dfonts\\");
             }
             catch (Exception e)
             {

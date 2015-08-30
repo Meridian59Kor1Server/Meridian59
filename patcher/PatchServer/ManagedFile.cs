@@ -36,6 +36,8 @@ namespace PatchListGenerator
             Filename = System.IO.Path.GetFileName(Filepath);
             if (Filepath.Contains("resource"))
                 Basepath = "\\resource\\";
+            if (Filepath.Contains("d3dfonts"))
+                Basepath = "\\d3dfonts\\";
         }
 
         public void ComputeHash()

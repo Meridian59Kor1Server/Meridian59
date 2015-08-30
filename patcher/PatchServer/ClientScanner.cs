@@ -26,13 +26,13 @@ namespace PatchListGenerator
 
         public ClientScanner(string basepath)
         {
-            ScanFolder = new List<string> {basepath, basepath + "\\resource"};
+            ScanFolder = new List<string> { basepath, basepath + "\\resource", basepath + "\\d3dfonts" };
             AddExensions();
         }
 
         private void AddExensions()
         {
-            ScanExtensions = new List<string> {".roo", ".dll", ".rsb", ".exe", ".bgf", ".wav", ".mp3", ".ttf", ".bsf"};
+            ScanExtensions = new List<string> {".roo", ".dll", ".rsb", ".exe", ".bgf", ".wav", ".mp3", ".ttf", ".bsf", ".dfd"};
         }
 
         public void ScanSource()
