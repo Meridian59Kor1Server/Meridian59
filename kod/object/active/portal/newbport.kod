@@ -88,6 +88,8 @@ messages:
 
          Send(what,@SetRandomHomeroom);
 
+         piDest_room = 52;
+
          % Allow an admin to set the portal to go somewhere else if needed.
          if piDest_room <> $
          {
