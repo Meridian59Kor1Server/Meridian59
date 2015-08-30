@@ -117,7 +117,7 @@ constants:
 
    % Damage is overall capped to this number.  Gives a slight edge to people
    %  with higher hps.
-   MAX_DAMAGE_PER_HIT = 99999
+   MAX_DAMAGE_PER_HIT = 134217727
 
    % What's the maximum stat we can have after modification?
    MAXIMUM_STAT = 70
@@ -5031,8 +5031,8 @@ messages:
    % This returns the battler's ability to-hit.  Ranges from 1 to 1000
    GetOffense(what = $, stroke_obj=$)
    {
-      local i, oWeapon, iStroke, iProficiency, iAim, iOffense,
-            oMonster, lRadiusState;
+      local i, oWeapon, iStroke, iProficiency, iAim, iRawAim, iAimMod, iOffense,
+            oMonster, iHealth, iRawStamina, iStaminaMod, lRadiusState;
 
       oWeapon = $;
 
@@ -5063,8 +5063,25 @@ messages:
          }
 
          iAim = Send(self,@GetAim);
-         iOffense = (iStroke*2) + (iProficiency*2) + (iAim*8) +
-               (200 * piBase_Max_Health)/(100 + Send(self,@GetStamina));
+
+         % Bind health between 20-150 for defense calculation.
+         %iHealth = Bound(piBase_Max_Health,20,150);
+         iHealth = Send(self,@GetBaseMaxHealth);
+         iRawStamina = Send(self,@GetRawStamina);
+         iRawAim = Send(self,@GetRawAim);
+         iStaminaMod = Send(self,@GetStaminaMod);
+         iAimMod = Send(self,@GetAimMod);
+
+         if (iHealth > 150)
+         {
+         iOffense = (((200 * 150) / (100 +(51 - (((iRawStamina*9)/10)+(iStaminaMod/4))))) + 
+                             ((iHealth - 150) * ((100 + ((((iRawAim*9)/10) + (iAimMod/4))*2)) / 20))) + 
+                             (iStroke*2) + (iProficiency*2) + (iAim*8);
+         }
+         else
+         {
+            iOffense = (iStroke*2) + (iProficiency*2) + (iAim*8) + ((200 * iHealth) / (100 + (51 - (((iRawStamina*9)/10) + (iStaminaMod/4)))));
+         }
 
          if oWeapon <> $
          {
@@ -5114,15 +5131,15 @@ messages:
       % The universal modifier.
       iOffense = iOffense + ((iOffense * piFlags3) / 100);
 
-      return Bound(iOffense,1,2000);
+      return Bound(iOffense,1,$);
    }
 
    GetDefense(what = $, stroke_obj=$)
    "This returns the battler's ability to avoid being hit. "
    "Ranges from 1 to 2000."
    {
-      local i, oWeapon, oShield, iParry, iDodge, iBlock, iAgility,
-            iDefense, iHealth, oMonster;
+      local i, oWeapon, oShield, iParry, iDodge, iBlock, iAgility, iAgilityMod,
+            iRawAgility, iDefense, iHealth, iRawStamina, iStaminaMod, oMonster;
 
       % Morphed?
       oMonster = Send(self,@GetIllusionForm);
@@ -5151,10 +5168,24 @@ messages:
          iAgility = Send(self,@GetAgility);
 
          % Bind health between 20-150 for defense calculation.
-         iHealth = Bound(piBase_Max_Health,20,150);
+         %iHealth = Bound(piBase_Max_Health,20,150);
+         iHealth = Send(self,@GetBaseMaxHealth);
+         iRawStamina = Send(self,@GetRawStamina);
+         iRawAgility = Send(self,@GetRawAgility);
+         iStaminaMod = Send(self,@GetStaminaMod);
+         iAgilityMod = Send(self,@GetAgilityMod);
 
-         iDefense = iParry + iBlock + (iDodge*2) + (iAgility*8)
-                     + (200 * iHealth)/(100 + Send(self,@GetStamina));
+         if (iHealth > 150)
+         {
+         iDefense = (((200 * 150) / (100 +(51 - (((iRawStamina*9)/10)+(iStaminaMod/4))))) + 
+                             ((iHealth - 150) * ((100 + ((((iRawAgility*9)/10) + (iAgilityMod/4))*2)) / 20))) + 
+                             iParry + iBlock + (iDodge*2) + (iAgility*8);
+         }
+         else
+         {
+         iDefense = iParry + iBlock + (iDodge*2) + (iAgility*8) + ((200 * iHealth) / (100 + (51 - (((iRawStamina*9)/10) + (iStaminaMod/4)))));
+         }
+
       }
 
       foreach i in plDefense_modifiers
@@ -5175,7 +5206,7 @@ messages:
       % The universal modifier.
       iDefense = iDefense + ((iDefense * piFlags3) / 100);
 
-      return bound(iDefense,1,2000);
+      return bound(iDefense,1,$);
    }
 
    % The next three messages deal with the three defense skills.  These
@@ -5260,7 +5291,9 @@ messages:
    GetDamage(what = $, stroke_obj=$)
    {
       local i, iDamage, oStroke, oWeapon, iStrokeNum, iModBonus, iDamageBonus,
-            oSpell, oMonster, lRadiusState;
+            oSpell, oMonster, lRadiusState, iFlagType, iWhatIsType, iHealth,
+            iRawMight, iRawIntellect, iRawStamina, iRawAgility, iRawMysticism, iRawAim,
+            iMightMod, iIntellectMod, iStaminaMod, iAgilityMod, iMysticismMod, iAimMod;
 
       % Morphed?
       oMonster = Send(self,@GetIllusionForm);
@@ -5330,6 +5363,76 @@ messages:
 
       % Convert to high precision. Super dirty, will be cleaned up shortly.
       iDamageBonus = iDamageBonus*100;
+
+      oStroke = stroke_obj;
+
+      oWeapon = Send(self,@GetWeapon);
+      if oWeapon = $
+      {
+         oStroke=Send(SYS,@FindSkillByNum,#num=SKID_PUNCH);
+         iFlagType = 1;
+      }
+      else if IsClass(oWeapon,&Weapon)
+      {
+         oStroke=Send(SYS,@FindSkillByNum,
+               #num=Send(oWeapon,@GetDefaultStrokeNumber));
+         iFlagType = 2;
+      }
+      else
+      {
+         % It's a spell, use it as the stroke object.
+         oStroke = oWeapon;
+         iFlagType = 3;
+      }
+
+      iHealth = Send(self,@GetBaseMaxHealth);
+
+      iRawMight = Send(self,@GetRawMight);
+      iRawIntellect = Send(self,@GetRawIntellect);
+      iRawStamina = Send(self,@GetRawStamina);
+      iRawAgility = Send(self,@GetRawAgility);
+      iRawMysticism = Send(self,@GetRawMysticism);
+      iRawAim = Send(self,@GetRawAim);
+
+      iMightMod = Send(self,@GetMightMod);
+      iIntellectMod = Send(self,@GetIntellectMod);
+      iStaminaMod = Send(self,@GetStaminaMod);
+      iAgilityMod = Send(self,@GetAgilityMod);
+      iMysticismMod = Send(self,@GetMysticismMod);
+      iAimMod = Send(self,@GetAimMod);
+
+      if(iHealth > 150)
+      {
+         if(iFlagType = 1)
+         {
+            iDamageBonus = iDamageBonus + 
+                         ((iHealth - 150) * ((100 + ((iRawMight*9)/10) + (iMightMod/4) + ((iRawStamina*9)/10) + (iStaminaMod/4)) / 20));
+         }
+         else if(iFlagType = 2)
+         {
+            iWhatIsType=Send(Send(self,@GetWeapon), @GetProfNumber);
+            if(iWhatIsType = 456)
+            {
+               iDamageBonus = iDamageBonus + 
+                            ((iHealth - 150) * ((100 + ((iRawAgility*9)/10) + (iAgilityMod/4) + ((iRawAim*9)/10) + (iAimMod/4)) / 20));
+            }
+            else if(iWhatIsType = 457)
+            {
+               iDamageBonus = iDamageBonus + 
+                            ((iHealth - 150) * ((100 + ((iRawAgility*9)/10) + (iAgilityMod/4) + ((iRawAim*9)/10) + (iAimMod/4)) / 20));
+            }
+            else
+            {
+            iDamageBonus = iDamageBonus + 
+                         ((iHealth - 150) * ((100 + ((iRawMight*9)/10) + (iMightMod/4) + ((iRawStamina*9)/10) + (iStaminaMod/4)) / 20));
+            }
+         }
+         else if(iFlagType = 3)
+         {
+            iDamageBonus = iDamageBonus + 
+                         ((iHealth - 150) * ((100 + ((iRawIntellect*9)/10) + (iIntellectMod/4) + ((iRawMysticism*9)/10) + (iMysticismMod/4)) / 20));
+         }
+      }
 
       iDamage = iDamage + iDamageBonus;
 
@@ -7425,9 +7528,19 @@ messages:
       return bound((piMight + piMightMod),1,MAXIMUM_STAT);
    }
 
+   GetMightMod()
+   {
+      return piMightMod;
+   }
+
    GetIntellect()
    {
       return bound((piIntellect + piIntellectMod),1,MAXIMUM_STAT);
+   }
+
+   GetIntellectMod()
+   {
+      return piIntellectMod;
    }
 
    GetAgility()
@@ -7435,9 +7548,19 @@ messages:
       return bound((piAgility + piAgilityMod),1,MAXIMUM_STAT);
    }
 
+   GetAgilityMod()
+   {
+      return piAgilityMod;
+   }
+
    GetAim()
    {
       return bound((piAim + piAimMod),1,MAXIMUM_STAT);
+   }
+
+   GetAimMod()
+   {
+      return piAimMod;
    }
 
    GetStamina()
@@ -7445,9 +7568,19 @@ messages:
       return bound((piStamina + piStaminaMod),1,MAXIMUM_STAT);
    }
 
+   GetStaminaMod()
+   {
+      return piStaminaMod;
+   }
+
    GetMysticism()
    {
       return bound((piMysticism + piMysticismMod),1,MAXIMUM_STAT);
+   }
+
+   GetMysticismMod()
+   {
+      return piMysticismMod;
    }
 
    GetRawMight()
@@ -8838,179 +8971,58 @@ messages:
             }
          }
 
-         if monster_level > piBase_Max_health
+         if killing_blow
+            AND ((piFlags & PFLAG_TOOK_DAMAGE)
+               OR (piFlags & PFLAG_DODGED))
          {
-            if killing_blow
-               AND ((piFlags & PFLAG_TOOK_DAMAGE)
-                  OR (piFlags & PFLAG_DODGED))
-            {
-               % Player took damage and landed killing blow
-               gain = 2;
-               roll = TRUE;
-            }
-            else
-            {
-               % Player either did not take damage, but did killing blow (mage),
-               %  or did take damage, did not land killing blow, or
-               %  it's a group member kill.
-               
-               gain = 1;
-
-               % We still roll for a tougher if we killed the monster but
-               % didn't take damage or dodge, if we helped kill the monster,
-               % or if it was a group member kill and the setting for group
-               % member toughers is set to TRUE.
-               if NOT group_member_kill
-                  OR Send(Send(SYS,@GetSettings),@GetGroupTougherSetting)
-               {
-                  roll = TRUE;
-               }
-               
-               % Inform the player that a group kill successfully garnered XP.
-               if group_member_kill
-                  AND group_member <> $
-                  AND gain = 1
-               {
-                  Send(self,@MsgSendUser,#message_rsc=group_experience_rsc,
-                        #parm1=Send(group_member,@GetName),
-                        #parm2=Send(what,@GetName));
-               }
-               
-               % Give an informative message about non-group
-               % kills that are still shared
-               if NOT killing_blow
-                  AND NOT group_member_kill
-                  AND group_member <> $
-               {
-                  Send(self,@MsgSendUser,#message_rsc=group_experience_rsc,
-                        #parm1=Send(group_member,@GetName),
-                        #parm2=Send(what,@GetName));
-               }
-            }
+            % Player took damage and landed killing blow
+            gain = monster_level / 5;
+            roll = TRUE;
          }
          else
          {
-            % Monster was equal or close to player level.  Small bonus,
-            %  no roll chance.
-            if (monster_level + 5) > piBase_Max_health
-               AND IsClass(what,&monster) AND killing_blow 
-               AND ((piFlags & PFLAG_TOOK_DAMAGE)
-                  OR (piFlags & PFLAG_DODGED))
+            % Player either did not take damage, but did killing blow (mage),
+            %  or did take damage, did not land killing blow, or
+            %  it's a group member kill.
+            
+            gain = monster_level / 5;
+
+            % We still roll for a tougher if we killed the monster but
+            % didn't take damage or dodge, if we helped kill the monster,
+            % or if it was a group member kill and the setting for group
+            % member toughers is set to TRUE.
+            if NOT group_member_kill
+               OR Send(Send(SYS,@GetSettings),@GetGroupTougherSetting)
             {
-               %gain = 1;
-%%%%%
-            if killing_blow
-               AND ((piFlags & PFLAG_TOOK_DAMAGE)
-                  OR (piFlags & PFLAG_DODGED))
-            {
-               % Player took damage and landed killing blow
-               gain = 1;
                roll = TRUE;
             }
-            else
+            
+            % Inform the player that a group kill successfully garnered XP.
+            if group_member_kill
+               AND group_member <> $
+               AND gain = 1
             {
-               % Player either did not take damage, but did killing blow (mage),
-               %  or did take damage, did not land killing blow, or
-               %  it's a group member kill.
-               
-               gain = 1;
-
-               % We still roll for a tougher if we killed the monster but
-               % didn't take damage or dodge, if we helped kill the monster,
-               % or if it was a group member kill and the setting for group
-               % member toughers is set to TRUE.
-               if NOT group_member_kill
-                  OR Send(Send(SYS,@GetSettings),@GetGroupTougherSetting)
-               {
-                  roll = TRUE;
-               }
-               
-               % Inform the player that a group kill successfully garnered XP.
-               if group_member_kill
-                  AND group_member <> $
-                  AND gain = 1
-               {
-                  Send(self,@MsgSendUser,#message_rsc=group_experience_rsc,
-                        #parm1=Send(group_member,@GetName),
-                        #parm2=Send(what,@GetName));
-               }
-               
-               % Give an informative message about non-group
-               % kills that are still shared
-               if NOT killing_blow
-                  AND NOT group_member_kill
-                  AND group_member <> $
-               {
-                  Send(self,@MsgSendUser,#message_rsc=group_experience_rsc,
-                        #parm1=Send(group_member,@GetName),
-                        #parm2=Send(what,@GetName));
-               }
+               Send(self,@MsgSendUser,#message_rsc=group_experience_rsc,
+                     #parm1=Send(group_member,@GetName),
+                     #parm2=Send(what,@GetName));
             }
-%%%%%
-            }
-            else
+               
+            % Give an informative message about non-group
+            % kills that are still shared
+            if NOT killing_blow
+               AND NOT group_member_kill
+               AND group_member <> $
             {
-               % Monster was too easy for player to kill!
-               if random(1,100) < 30 AND killing_blow
-               {
-                  Send(self,@MsgSendUser,#message_rsc=player_spits);
-%%%%%
-            if killing_blow
-               AND ((piFlags & PFLAG_TOOK_DAMAGE)
-                  OR (piFlags & PFLAG_DODGED))
-            {
-               % Player took damage and landed killing blow
-               gain = 1;
-               roll = TRUE;
-            }
-            else
-            {
-               % Player either did not take damage, but did killing blow (mage),
-               %  or did take damage, did not land killing blow, or
-               %  it's a group member kill.
-               
-               gain = 1;
-
-               % We still roll for a tougher if we killed the monster but
-               % didn't take damage or dodge, if we helped kill the monster,
-               % or if it was a group member kill and the setting for group
-               % member toughers is set to TRUE.
-               if NOT group_member_kill
-                  OR Send(Send(SYS,@GetSettings),@GetGroupTougherSetting)
-               {
-                  roll = TRUE;
-               }
-               
-               % Inform the player that a group kill successfully garnered XP.
-               if group_member_kill
-                  AND group_member <> $
-                  AND gain = 1
-               {
-                  Send(self,@MsgSendUser,#message_rsc=group_experience_rsc,
-                        #parm1=Send(group_member,@GetName),
-                        #parm2=Send(what,@GetName));
-               }
-               
-               % Give an informative message about non-group
-               % kills that are still shared
-               if NOT killing_blow
-                  AND NOT group_member_kill
-                  AND group_member <> $
-               {
-                  Send(self,@MsgSendUser,#message_rsc=group_experience_rsc,
-                        #parm1=Send(group_member,@GetName),
-                        #parm2=Send(what,@GetName));
-               }
-            }
-%%%%%
-               }
+               Send(self,@MsgSendUser,#message_rsc=group_experience_rsc,
+                     #parm1=Send(group_member,@GetName),
+                     #parm2=Send(what,@GetName));
             }
          }
 
          % Give newbies a little bonus.
          if piBase_Max_health < Send(Send(SYS,@GetSettings),@GetPKillEnableHP)
          {
-            gain = gain + 1;
+            gain = gain + monster_level / 5;
          }
          else
          {
@@ -9029,7 +9041,7 @@ messages:
                AND ((piFlags & PFLAG_TOOK_DAMAGE)
                   OR (piFlags & PFLAG_DODGED))
             {
-               gain = gain + 1;
+               %gain = gain + 1;
             }
          }
          
@@ -9165,22 +9177,24 @@ messages:
    "FALSE otherwise.  The iLevel parameter has the player's base max HP "
    "taken from it, then divided by 5 before being bound between 1 and 10."
    {
-      local iRandom, iNumber, oShrunken;
+      local iRandom, iNumber, oShrunken, temp;
 
       if iLevel = $
       {
          iLevel = 0;
       }
 
-      iRandom = Random(1,Send(self,@GetHighMark));
-      iNumber = piGain_chance + Bound((iLevel-piBase_Max_health)/5,0,10);
+      iRandom = Send(self,@GetHighMark);
+      iNumber = piGain_chance;
 
       % Draw tougher chance bar.
       Post(self,@DrawHPChance);
 
-      if iRandom < iNumber
+      if iRandom <= iNumber
          AND piBase_Max_health < (99999)
       {
+         temp = Send(self,@GetHighMark);
+
          Send(self,@GainBaseMaxHealth,#amount=1);
          if Send(self,@CheckLog)
          {
@@ -9211,7 +9225,7 @@ messages:
             }
          }
 
-         piGain_chance = -(piBase_Max_health / 2);
+         piGain_chance = piGain_chance - temp;
 
          if piBase_max_health > 30
          {
@@ -9221,7 +9235,7 @@ messages:
             %pigain = pigain - ((50-25)/2) = pigain - 12.5
             % So, after 30 hps, any stamina less than 50
             % penalizes you by about 0.5 piGain points
-            piGain_chance = piGain_chance - ((50-Send(self,@GetStamina))/2);
+            %piGain_chance = 0;
          }
 
          return TRUE;
@@ -9332,8 +9346,8 @@ messages:
    {
       local index, highmark;
 
-      index = (piBase_Max_health*(100-Send(self,@GetStamina)))/100;
-      highmark = (index+1)*index;
+      index = (piBase_Max_health*((125-Send(self,@GetStamina))-((50-Send(self,@GetStamina))/2))) / 100;
+      highmark = ((index+1)*index) / 5;
 
       return highmark;
    }

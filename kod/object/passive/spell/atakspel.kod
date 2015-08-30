@@ -162,7 +162,8 @@ messages:
 
    CastSpell(who=$,lTargets=$,iSpellPower=0,bItemCast=FALSE)
    {
-      local i, iDamage, iManaFocus, iTemp, oRoom;
+      local i, iDamage, iManaFocus, iTemp, oRoom, iRawIntellect, iRawMysticism, iHealth,
+               iIntellectMod, iMysticismMod;
 
       iTemp = $;
 
@@ -186,6 +187,17 @@ messages:
          {
             % Myst and Int boost base damage
             iDamage = Send(self,@DamageFactors,#damage=iDamage,#who=who);
+            iHealth = Send(who,@GetBaseMaxHealth);
+            iRawIntellect = Send(who,@GetRawIntellect);
+            iRawMysticism = Send(who,@GetRawMysticism);
+            iIntellectMod = Send(who,@GetIntellectMod);
+            iMysticismMod = Send(who,@GetMysticismMod);
+
+            if(iHealth > 150)
+            {
+               iDamage = iDamage + 
+                            ((iHealth - 150) * ((100 + ((iRawIntellect*9)/10) + (iIntellectMod/4) + ((iRawMysticism*9)/10) + (iMysticismMod/4)) / 20));
+            }
 
             % Reduce damage based on spell power.
             iDamage = (iDamage * (50 + (iSpellPower / 2))) / SPELLPOWER_MAXIMUM;
@@ -297,7 +309,7 @@ messages:
 
    DamageFactors(damage=0,who=$)
    {
-      local iDamage, iMysticism, iIntellect;
+      local iDamage, iMysticism, iIntellect, iRawMysticism, iRawIntellect;
 
       % Get dual stats damage bonus.
       % These difficult to master attack spells require both high mysticism
