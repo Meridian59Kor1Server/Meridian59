@@ -117,7 +117,7 @@ constants:
 
    % Damage is overall capped to this number.  Gives a slight edge to people
    %  with higher hps.
-   MAX_DAMAGE_PER_HIT = 134217727
+   MAX_DAMAGE_PER_HIT = 1342177
 
    % What's the maximum stat we can have after modification?
    MAXIMUM_STAT = 70
@@ -9346,7 +9346,7 @@ messages:
    {
       local index, highmark;
 
-      index = (piBase_Max_health*((125-Send(self,@GetStamina))-((50-Send(self,@GetStamina))/2))) / 100;
+      index = (piBase_Max_health*((125-Send(self,@GetRawStamina))-((50-Send(self,@GetRawStamina))/2))) / 100;
       highmark = ((index+1)*index) / 5;
 
       return highmark;
