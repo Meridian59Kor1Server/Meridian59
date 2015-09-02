@@ -9000,11 +9000,12 @@ messages:
             % Inform the player that a group kill successfully garnered XP.
             if group_member_kill
                AND group_member <> $
-               AND gain = 1
+               AND gain >= 1
             {
                Send(self,@MsgSendUser,#message_rsc=group_experience_rsc,
                      #parm1=Send(group_member,@GetName),
                      #parm2=Send(what,@GetName));
+               gain = (monster_level / 5) / 10;
             }
                
             % Give an informative message about non-group
@@ -9016,6 +9017,7 @@ messages:
                Send(self,@MsgSendUser,#message_rsc=group_experience_rsc,
                      #parm1=Send(group_member,@GetName),
                      #parm2=Send(what,@GetName));
+               gain = (monster_level / 5) / 10;
             }
          }
 
